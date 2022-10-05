@@ -1,4 +1,4 @@
-package com.sartorius
+package com.sartorius.consumer
 
 import akka.Done
 import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
@@ -8,8 +8,9 @@ import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.util.Timeout
-import com.sartorius.Protocol.Measurement
+import com.sartorius.Settings
 import com.sartorius.Settings.{committerSettings, consumerSettings}
+import com.sartorius.consumer.Protocol.Measurement
 import io.circe
 import io.circe.generic.auto._
 import io.circe.parser.parse
@@ -20,7 +21,9 @@ import scala.concurrent.duration.DurationInt
 
 object KafkaConsumer {
 
-  def apply(messageProcessor: ActorRef[MessageProcessor.Protocol])(implicit system: ActorSystem[Nothing]): DrainingControl[Done] = {
+  def apply(
+    messageProcessor: ActorRef[MessageProcessor.Protocol]
+  )(implicit system: ActorSystem[Nothing]): DrainingControl[Done] = {
 
     implicit val askTimeout: Timeout = Timeout(2.seconds)
 
@@ -28,14 +31,15 @@ object KafkaConsumer {
 
     Consumer
       .committableSource(consumerSettings, Subscriptions.topics(Settings.topicName))
-      .map {
-        case CommittableMessage(record, committableOffset) => (committableOffset, parseMeasurement(record.value()))
+      .map { case CommittableMessage(record, committableOffset) =>
+        (committableOffset, parseMeasurement(record.value()))
       }
       .throttle(2, 1.seconds)
-      .mapAsync(2) {
-        case (offset, Right(measurement)) => messageProcessor
-          .ask(MessageProcessor.AddMeasurement(measurement, _))
-          .map(_ => offset)
+      .mapAsync(1) {
+        case (offset, Right(measurement)) =>
+          messageProcessor
+            .ask(MessageProcessor.AddMeasurement(measurement, _))
+            .map(_ => offset)
         case (offset, Left(circeError)) =>
           println(s"Failed to decode json: $circeError")
           Future.successful(offset)

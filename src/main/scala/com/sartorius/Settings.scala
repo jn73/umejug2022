@@ -10,13 +10,10 @@ object Settings {
 
   private val config = ConfigFactory.load()
 
-  val consumerSettings: ConsumerSettings[String, String] = ConsumerSettings(
-    config.getConfig("akka.kafka.consumer"),
-    new StringDeserializer,
-    new StringDeserializer
-  )
-    .withBootstrapServers("localhost:9092")
-    .withGroupId("umeJug")
+  val consumerSettings: ConsumerSettings[String, String] =
+    ConsumerSettings(config.getConfig(ConsumerSettings.configPath), new StringDeserializer, new StringDeserializer)
+      .withBootstrapServers("localhost:9092")
+      .withGroupId("umeJug")
 
   val committerSettings: CommitterSettings = CommitterSettings(config.getConfig(CommitterSettings.configPath))
 

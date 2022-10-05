@@ -1,4 +1,4 @@
-package com.sartorius
+package com.sartorius.consumer
 
 import akka.actor.CoordinatedShutdown
 import akka.actor.typed.scaladsl.Behaviors
@@ -13,7 +13,6 @@ object KafkaConsumerApp extends App {
   object RootBehavior {
 
     def apply(): Behavior[NotUsed] = Behaviors.setup { ctx =>
-
       val messageProcessor =
         ctx.spawn(MessageProcessor(), "messageProcessorActor")
 

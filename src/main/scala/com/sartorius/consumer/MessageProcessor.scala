@@ -1,9 +1,9 @@
-package com.sartorius
+package com.sartorius.consumer
 
 import akka.Done
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import com.sartorius.Protocol.Measurement
+import com.sartorius.consumer.Protocol.Measurement
 
 object MessageProcessor {
 

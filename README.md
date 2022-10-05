@@ -15,7 +15,6 @@
     - Typed language that feels like a dynamic language
     - Static type checking
     - Large echo system
-    - A language where there's always something new to learn
 - JVM language
 - Akka
 
@@ -64,9 +63,8 @@ object MyActor {
   case class Ping(message: String) extends Protocol
 
   def apply(): Behavior[Protocol] = {
-    Behaviors.receiveMessage {
-      case Ping(message) =>
-        println(s"Received a Ping: $message")
+    Behaviors.receiveMessage { case Ping(message) =>
+      println(s"Received a Ping: $message")
     }
   }
 
@@ -77,6 +75,7 @@ object MyApplication extends App {
 
   actorSystem ! MyActor.Ping("Hello Actor!")
 }
+
 ```
 
 ## Akka streams
@@ -105,6 +104,31 @@ val randomIntMultiplier: RunnableGraph[NotUsed] = randomIntSource
   .to(Sink.foreach(v => println(s"Computed value: $v")))
 
 randomIntMultiplier.run()
+```
+
+```scala
+import akka.stream.scaladsl.Source
+import scala.util.Random
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.RunnableGraph
+import scala.concurrent.duration.DurationInt
+
+val src: Source[String, NotUsed] = Source.single("some value")
+val firstFlow: Flow[String, String, NotUsed] = Flow.fromFunction(_.toUpperCase)
+val secondFlow: Flow[String, String, NotUsed] = Flow.fromFunction(_.reverse)
+val sink: Sink[String, NotUsed] = Sink.foreach(println)
+
+// Attaching a Source to a Flow returns a new Source
+val srcViaFlow: Source[Int, NotUsed] = src.via(firstFlow)
+
+// Attaching a Flow to a Sink (to) returns a new Sink
+val flowToSink: Sink[String, NotUsed] = secondFlow.to(sink)
+
+srcViaFlow.runWith(flowToSink)
+
+// ((src) ~> [firstFlow]) ~> <[secondFlow] ~> <sink>>
 
 ```
 
@@ -137,7 +161,11 @@ val committerSink: Sink[ConsumerMessage.Committable, Future[Done]] = Committer.s
 
 val kafkaProcessingRunnableGraph: RunnableGraph[DrainingControl[Nothing]] = kafkaConsumerSource
   .throttle(10, 2.seconds)
-  .via(Flow.fromFunction[ConsumerMessage.CommittableMessage[String, String], ConsumerMessage.Committable](f => f.committableOffset))
+  .via(
+    Flow.fromFunction[ConsumerMessage.CommittableMessage[String, String], ConsumerMessage.Committable](f =>
+      f.committableOffset
+    )
+  )
   .toMat(committerSink)(DrainingControl.apply)
 
 val control: DrainingControl[Nothing] = kafkaProcessingRunnableGraph.run()
@@ -146,7 +174,7 @@ control.drainAndShutdown()
 
 ```
 
-## Circe - processing json in a functional way
+## Circe
 
 ```scala
 import io.circe.parser.parse
