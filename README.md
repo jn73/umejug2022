@@ -1,10 +1,23 @@
 # Using Scala and Akka streams to consume and produce Kafka messages
 
+
+## Jan Eriksson
+
+- Developer at Sartorius
+- jneriksson@gmail.com
+
 [https://github.com/jn73/umejug2022](https://github.com/jn73/umejug2022)
+
+
+### "Talk about Scala"
+
+- How do you do that in an hour?
+- Quick overview of Akka (actors/streaming)
+- Look at some basic scala constructs (to understand the code)
 
 ## Umetrics studio backend basics
 
-- Event driven micro-service architecture
+- Event driven microservice based architecture
 - Kafka used as message broker
 - Moving towards event sourcing
 - Using Scala and Java when implementing backend services
@@ -12,8 +25,9 @@
 ## Why Scala?
 
 - Functional language
-- Typed statically typed language with a "dynamic feeling"
-- JVM language -> large echo system
+- JVM language
+  - coexists with Java
+  - large ecosystem
 - Akka
 
 ## Why Akka
@@ -32,20 +46,38 @@
 
 Starting with Akka 2.7 the license for all Akka modules will change from Apache 2.0 to the BSL v1.1
 
-- Free for companies with less then $25m in annual revenue
+- Free for companies with less than $25m in annual revenue
 - Reverts to the Apache 2.0 license after three years.
 - [Pricing](https://www.lightbend.com/akka#pricing) per core. Standard and Enterprice alternatives available.
 
-## A typical microservice
+## Getting started
+
+- Install scala + sbt (https://sdkman.io)
+  - sdk install scala 2.13.8
+  - sdk install sbt 1.6.2
+  - sbt new akka/akka-scala-seed.g8 (https://www.scala-sbt.org/1.x/docs/sbt-new-and-Templates.html)
+- Use your favourite IDE (IntelliJ, ScalaIDE for Eclipse, VSCode)
+- Good online resources
+  - https://docs.scala-lang.org
+  - https://rockthejvm.com
+
+## A typical microservice at Sartorius
 
 - Scala project that uses [SBT](https://www.scala-sbt.org/) as build tool.
 - Application implemented as an Akka service.
-- Using Akka streaming and Alpakka to consume messages from Kafka topics.
-- Using [circe](https://circe.github.io/circe/) for simple and typesefe json serialization.
+- Using Akka streaming and Alpakka to consume Kafka messages.
+- Using [circe](https://circe.github.io/circe/) for json serialization.
 - Perform som application logic.
-- Produce some resul (publishing some event on a kafka topic for example).
+- Produce some result (publishing some event on a kafka topic for example).
 - Published as a docker image.
-- Deployed as a kubernetes service.
+- Applications are deployed as a kubernetes service.
+
+## Overview
+
+- Go through some scala fundamentals to understand the example
+- Basic Akka actor
+- Akka streaming example (Alpakka)
+- Example application
 
 ## Some scala basics
 
@@ -53,8 +85,12 @@ Starting with Akka 2.7 the license for all Akka modules will change from Apache 
 
 ```scala
 var mutableNumber = 10 // type is inferred
+mutableNumber = 20
 
-val immutableNumber = 10 
+val immutableNumber: Int = 10
+
+import scala.util.Random
+lazy val someLazyValue = Random.nextInt()
 ```
 
 [link: values_and_variables.sc](docs/values_and_variables.sc)
@@ -116,22 +152,25 @@ a match {
 
 ## Akka actors
 
+- Single threaded message processor
+
 ```scala
 import akka.actor.typed._
 import akka.actor.typed.scaladsl._
 
-object MyActor {
+object PingHandler {
 
   sealed trait Protocol
 
-  case class Ping(message: String, replyTo: ActorRef[String]) extends Protocol
+  case class Ping(message: String, replyTo: ActorRef[Pong]) extends Protocol
 
   case object Pong
 
   def apply(): Behavior[Protocol] = {
-    Behaviors.receiveMessage { case Ping(message, replyTo) =>
-      println(s"Received a Ping: $message")
-      replyTo ! Pong
+    Behaviors.receiveMessage { 
+      case Ping(message, replyTo) =>
+        println(s"Received a Ping: $message")
+        replyTo ! Pong
     }
   }
 
@@ -139,17 +178,18 @@ object MyActor {
 
 object MyApplication extends App {
 
-  val pingClient: ActorRef[String] = ???
-  val pingServer: ActorRef[MyActor.Protocol] = ???
+  val pingClient: ActorRef[PingHandler.Pong] = ???
+  val pingHandler: ActorRef[PingHandler.Protocol] = ???
 
-  pingServer ! MyActor.Ping("Hello Actor!", replyTo = pingClient)
+  pingHandler ! PingHandler.Ping("Hello Actor!", replyTo = pingClient)
 }
 
 ```
 
 ## Akka streams
 
-- Founding member of the [Reactive Streams initiative](https://www.reactive-streams.org/)
+https://doc.akka.io/docs/akka/current/stream/index.html
+
 - Using constructs such as Source[T], Flow[A, B] and Sink[T] to process streaming data
 
 ![](/Users/janne/projects/umejug2022/img/streams-1.png)
@@ -163,7 +203,7 @@ def multiplierFlow: Flow[Int, Int, NotUsed] = Flow.fromFunction(_ * 10)
 val multiplierGraph: RunnableGraph[NotUsed] = Source
   .single(1)
   .via(multiplierFlow)
-  .to(Sink.foreach(println))
+  .to(Sink.foreach(println)) // same as Sink.foreach(value => println(value))
 
 multiplierGraph.run()
 ```
@@ -181,8 +221,8 @@ val randomIntSource: Source[Int, NotUsed] = Source.fromIterator(() => Iterator.c
 
 val randomIntMultiplier: RunnableGraph[NotUsed] = randomIntSource
   .throttle(5, 1.second)
-  .take(20000)
-  .takeWhile(_ < 1000)
+  .take(200)
+  .takeWhile(_ < 80)
   .map(_ * 10) // using map instead of Flow
   .to(Sink.foreach(v => println(s"Computed value: $v")))
 

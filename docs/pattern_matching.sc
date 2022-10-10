@@ -1,4 +1,3 @@
-// Pattern matching
 
 val a = "kalle anka"
 
@@ -22,14 +21,7 @@ val multiply : Int => Int = {
 
 multiply(20)
 
-// matching regex
-val expr = """kalle (\S+)""".r
-
-a match {
-  case expr(surname) => s"Hello mr. $surname"
-}
-
-// mattching case classes
+// matching case classes
 case class Person(name: String, age: Int)
 
 val kalle = Person("Kalle Anka", 25)
@@ -39,3 +31,9 @@ kalle match {
 }
 
 
+// matching regex
+val expr = """kalle (\S+)""".r
+
+a match {
+  case expr(surname) => s"Hello mr. $surname"
+}
