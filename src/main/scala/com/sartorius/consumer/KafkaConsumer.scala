@@ -4,9 +4,9 @@ import akka.Done
 import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.kafka.ConsumerMessage.CommittableMessage
-import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
+import akka.kafka.{ConsumerMessage, Subscriptions}
 import akka.util.Timeout
 import com.sartorius.Settings
 import com.sartorius.Settings.{committerSettings, consumerSettings}
@@ -14,6 +14,7 @@ import com.sartorius.consumer.Protocol.Measurement
 import io.circe
 import io.circe.generic.auto._
 import io.circe.parser.parse
+import org.apache.kafka.clients.consumer.ConsumerRecord
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,10 +32,14 @@ object KafkaConsumer {
 
     Consumer
       .committableSource(consumerSettings, Subscriptions.topics(Settings.topicName))
-      .map { case CommittableMessage(record, committableOffset) =>
-        (committableOffset, parseMeasurement(record.value()))
-      }
       .throttle(2, 1.seconds)
+      .map {
+        case CommittableMessage(
+              record: ConsumerRecord[String, String],
+              committableOffset: ConsumerMessage.CommittableOffset
+            ) =>
+          (committableOffset, parseMeasurement(record.value()))
+      }
       .mapAsync(1) {
         case (offset, Right(measurement)) =>
           messageProcessor

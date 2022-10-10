@@ -1,9 +1,9 @@
 package com.sartorius.consumer
 
+import java.time.Instant
+
 object Protocol {
 
-  case class Pair[A, B](first: A, second: B)
-
-  case class Measurement(value: Double)
+  case class Measurement(value: Double, time: Instant)
 
 }
