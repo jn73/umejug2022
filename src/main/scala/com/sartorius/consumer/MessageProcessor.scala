@@ -13,15 +13,16 @@ object MessageProcessor {
 
   case class GetSum(replyTo: ActorRef[Double]) extends Protocol
 
-  def apply(measurements: Seq[Measurement] = List.empty): Behavior[Protocol] = Behaviors.receiveMessage {
-    case AddMeasurement(measurement, replyTo) =>
-      println("added measurement: " + measurement.value)
-      replyTo ! Done
-      MessageProcessor(measurements :+ measurement)
+  def apply(measurements: Seq[Measurement] = List.empty): Behavior[Protocol] =
+    Behaviors.receiveMessage {
+      case AddMeasurement(measurement, replyTo) =>
+        println("added measurement: " + measurement.value)
+        replyTo ! Done
+        MessageProcessor(measurements :+ measurement)
 
-    case GetSum(replyTo) =>
-      replyTo ! measurements.map(_.value).sum
-      Behaviors.same
-  }
+      case GetSum(replyTo) =>
+        replyTo ! measurements.map(_.value).sum
+        Behaviors.same
+    }
 
 }

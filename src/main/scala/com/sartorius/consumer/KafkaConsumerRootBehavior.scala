@@ -11,7 +11,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object KafkaConsumerRootBehavior {
 
   def apply(): Behavior[NotUsed] = Behaviors.setup { ctx =>
-
     val messageProcessor =
       ctx.spawn(MessageProcessor(), "messageProcessorActor")
 
@@ -21,9 +20,8 @@ object KafkaConsumerRootBehavior {
     val kafkaConsumer: Consumer.DrainingControl[Done] =
       KafkaConsumer(messageProcessor)(ctx.system)
 
-    CoordinatedShutdown(ctx.system).addTask(CoordinatedShutdown.PhaseServiceUnbind, "shutDownKafkaConsumer")(() =>
-      kafkaConsumer.drainAndShutdown()
-    )
+    CoordinatedShutdown(ctx.system)
+      .addTask(CoordinatedShutdown.PhaseServiceUnbind, "shutDownKafkaConsumer")(() => kafkaConsumer.drainAndShutdown())
 
     Behaviors.receiveSignal { case (ctx, Terminated(actorRef)) =>
       ctx.log.error(s"Actor terminated: ${actorRef.path}")

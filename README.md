@@ -1,11 +1,5 @@
 # Using Scala and Akka streams to consume and produce Kafka messages
 
-
-## Jan Eriksson
-
-- Developer at Sartorius
-- jneriksson@gmail.com
-
 [https://github.com/jn73/umejug2022](https://github.com/jn73/umejug2022)
 
 
@@ -19,8 +13,7 @@
 
 - Event driven microservice based architecture
 - Kafka used as message broker
-- Moving towards event sourcing
-- Using Scala and Java when implementing backend services
+- Using Scala (2) and Java when implementing backend services
 
 ## Why Scala?
 
@@ -30,7 +23,7 @@
   - large ecosystem
 - Akka
 
-## Why Akka
+## Why Akka?
 
 [Akka is a toolkit for building highly concurrent, distributed, and resilient message-driven applications for Java and Scala](http://akka.io)
 
@@ -40,7 +33,6 @@
 - (Akka persistence)
 - (Akka http)
 - (Akka cluster)
-- (Akka management)
 
 ### Changes to license
 
@@ -57,11 +49,11 @@ Starting with Akka 2.7 the license for all Akka modules will change from Apache 
   - sdk install sbt 1.6.2
   - sbt new akka/akka-scala-seed.g8 (https://www.scala-sbt.org/1.x/docs/sbt-new-and-Templates.html)
 - Use your favourite IDE (IntelliJ, ScalaIDE for Eclipse, VSCode)
-- Good online resources
+- Online resources
   - https://docs.scala-lang.org
   - https://rockthejvm.com
 
-## A typical microservice at Sartorius
+## A "typical" microservice
 
 - Scala project that uses [SBT](https://www.scala-sbt.org/) as build tool.
 - Application implemented as an Akka service.
@@ -74,7 +66,7 @@ Starting with Akka 2.7 the license for all Akka modules will change from Apache 
 
 ## Overview
 
-- Go through some scala fundamentals to understand the example
+- Go through some scala fundamentals to understand the examples
 - Basic Akka actor
 - Akka streaming example (Alpakka)
 - Example application
@@ -231,6 +223,9 @@ randomIntMultiplier.run()
 
 ### Materialized views
 
+- Previous examples only deals with payload
+- How do we retrieve results from the stream that aren't just println etc?
+
 ```scala
 import akka.stream.scaladsl._
 import akka.NotUsed
@@ -241,14 +236,16 @@ val src: Source[Int, NotUsed] = Source(List(1, 2, 3))
 
 // how do we read the actual first value?
 val graph: RunnableGraph[NotUsed] = src
-  .map(_ * 10)
-  .to(Sink.head)
+        .map(_ * 10)
+        .to(Sink.head)
 
 val graphWithMaterializedValue: RunnableGraph[Future[Int]] = src
-  .map(_ * 10)
-  .toMat(Sink.head)(Keep.right)
+        .map(_ * 10)
+        .toMat(Sink.head)(Keep.right)
 
-val headValue = Await.result(graphWithMaterializedValue, 1.second)
+val materializedFuture: Future[Int] = graphWithMaterializedValue.run()
+
+val headValue: Int = Await.result(materializedFuture, 1.second)
 ```
 
 ### Using alpakka to consume Kafka messages in a streaming way
@@ -274,7 +271,6 @@ val kafkaConsumerSource: Source[ConsumerMessage.CommittableMessage[String, Strin
 val committerSink: Sink[ConsumerMessage.Committable, Future[Done]] = Committer.sink(committerSettings)
 
 val kafkaProcessingRunnableGraph: RunnableGraph[DrainingControl[Nothing]] = kafkaConsumerSource
-  .throttle(10, 2.seconds)
   .via(
     Flow.fromFunction[ConsumerMessage.CommittableMessage[String, String], ConsumerMessage.Committable](message =>
       // do some application logic..

@@ -28,7 +28,8 @@ object KafkaConsumer {
 
     implicit val askTimeout: Timeout = Timeout(2.seconds)
 
-    def parseMeasurement(message: String): Either[circe.Error, Measurement] = parse(message).flatMap(_.as[Measurement])
+    def parseMeasurement(message: String): Either[circe.Error, Measurement] =
+      parse(message).flatMap(_.as[Measurement])
 
     Consumer
       .committableSource(consumerSettings, Subscriptions.topics(Settings.topicName))
